@@ -1,0 +1,95 @@
+package geekbrain;
+
+
+
+public class Main {
+
+    public static void main(String[] args) {
+
+
+        Cat pushok = new Cat("Пушок", 200, 0);
+        Dog bobik = new Dog("Бобик", 400, 5);
+        Cat ryzhik = new Cat("Рыжик", 200, 0);
+        Dog moryak = new Dog("Моряк", 200, 100);
+        Cat viver = new Cat("Рыболов", 150, 0);
+
+        pushok.swim((int) (Math.random() * 50));
+        pushok.run((int) (Math.random() * 300));
+        bobik.swim((int) (Math.random() * 50));
+        bobik.run((int) (Math.random() * 300));
+        moryak.swim((int) (Math.random() * 50));
+        moryak.run((int) (Math.random() * 300));
+        ryzhik.swim((int) (Math.random() * 50));
+        ryzhik.run((int) (Math.random() * 300));
+        viver.swim((int) (Math.random() * 50));
+        viver.run((int) (Math.random() * 300));
+
+        System.out.println("Всего животных: " + Animal.getCounter());
+        System.out.println("Всего котов: " + Cat.getCounter());
+        System.out.println("Всего собак: " + Dog.getCounter());
+
+}
+
+
+}
+
+class Animal {
+
+
+String name;
+public int max_run_dist;
+public int max_swim_dist;
+private static int count_anim;
+
+
+
+
+    public Animal(String name, int max_run_dist, int max_swim_dist) {
+
+        this.name = name;
+        this.max_run_dist = max_run_dist;
+        this.max_swim_dist = max_swim_dist;
+        count_anim++;
+    }
+
+    public void run(int run_dist) {
+        if (run_dist <= max_run_dist) {
+            System.out.println(name + " пробежал " + run_dist + " м.");
+        }
+        else {System.out.println(name + " не может пробежать такое расстояние! " + "("+run_dist+" м.)");}
+    }
+    public void swim(int swim_dist) {
+        if (swim_dist <= max_swim_dist) {
+            System.out.println(name + " проплыл " + swim_dist + " м.");
+        }
+        else {System.out.println(name + " не может проплыть такое расстояние! " + "("+swim_dist+" м.)");}
+    }
+    public static int getCounter() {
+        return count_anim;
+    }
+    }
+
+class Cat extends Animal {
+    private static int count_cat;
+    public Cat(String name, int max_run_dist, int max_swim_dist) {
+        super(name, max_run_dist, max_swim_dist);
+        count_cat++;
+    }
+    @Override
+    public void swim(int dist) {
+        System.out.println(name + " не умеет плавать!");
+    }
+    public static int getCounter() {
+        return count_cat;
+    }
+}
+class Dog extends Animal {
+    private static int count_dog = 0;
+    public Dog(String name, int max_run_dist, int max_swim_dist) {
+        super(name, max_run_dist, max_swim_dist);
+        count_dog++;
+    }
+    public static int getCounter() {
+        return count_dog;
+    }
+}
