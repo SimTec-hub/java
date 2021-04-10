@@ -1,0 +1,446 @@
+package geekbrain;
+
+
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.Random;
+import java.util.Scanner;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+
+class Main {
+    public static void main(String[] args) {
+        new GameWindow();
+    }
+}
+
+class GameMap extends JPanel {
+    public static final int MODE_VS_AI = 0;
+    public static final int MODE_VS_HUMAN = 1;
+    private static final Random RANDOM = new Random();
+    private static final int DOT_EMPTY = 0;
+    private static final int DOT_HUMAN = 1;
+    private static final int DOT_AI = 2;
+    private static final int DOT_PADDING = 7;
+    private static final int STATE_DRAW = 0;
+    private static final int STATE_WIN_HUMAN = 1;
+    private static final int STATE_WIN_AI = 2;
+
+    private int stateGameOver;
+
+    private int[][] field;
+    private int fieldSizeX;
+    private int fieldSizeY;
+    private int winLength;
+    private int cellWidth;
+    private int cellHeight;
+    private boolean isGameOver;
+    private boolean initialized;
+//    private String playerOneName = "";
+//
+//    private static int scoreHuman = 0;
+//    private static int scoreAI = 0;
+
+    public GameMap() {
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                super.mouseReleased(e);
+                update(e);
+            }
+        });
+        initialized = false;
+    }
+
+    private void update(MouseEvent e) {
+        if (isGameOver || !initialized) return;
+        int cellX = e.getX() / cellWidth;
+        int cellY = e.getY() / cellWidth;
+        if (!isCellValid(cellX, cellY) || !isCellEmpty(cellX, cellY)) return;
+        field[cellY][cellX] = DOT_HUMAN;
+        repaint();
+        if (gameCheck(DOT_HUMAN, STATE_WIN_HUMAN)) return;
+        aiTurn();
+        repaint();
+        if (gameCheck(DOT_AI, STATE_WIN_AI)) return;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        render(g);
+    }
+
+    private void render(Graphics g) {
+        if (!initialized) return;
+        int width = getWidth();
+        int height = getHeight();
+        cellWidth = width / fieldSizeX;
+        cellHeight = height / fieldSizeY;
+        g.setColor(Color.BLACK);
+
+        for (int i = 0; i < fieldSizeY; i++) {
+            int y = i * cellHeight;
+            g.drawLine(0, y, width, y);
+        }
+        for (int i = 0; i < fieldSizeX; i++) {
+            int x = i * cellWidth;
+            g.drawLine(x, 0, x, height);
+        }
+
+        for (int y = 0; y < fieldSizeY; y++) {
+            for (int x = 0; x < fieldSizeX; x++) {
+                if (isCellEmpty(x, y)) continue;
+                if (field[y][x] == DOT_HUMAN) {
+                    g.setColor(new Color(1, 1, 255));
+                    g.fillOval(x * cellWidth + DOT_PADDING,
+                            y * cellHeight + DOT_PADDING,
+                            cellWidth - DOT_PADDING * 2,
+                            cellHeight - DOT_PADDING * 2);
+                } else if (field[y][x] == DOT_AI) {
+                    g.setColor(Color.RED);
+                    g.fillRect(x * cellWidth + DOT_PADDING,
+                            y * cellHeight + DOT_PADDING,
+                            cellWidth - DOT_PADDING * 2,
+                            cellHeight - DOT_PADDING * 2);
+                } else {
+                    throw new RuntimeException("Something wrong with coordinates");
+                }
+            }
+        }
+
+        if (isGameOver) {
+            showMessageGameOver(g);
+        }
+    }
+
+    public void startNewGame(int gameMode, int fieldSize, int winLength) {
+        this.fieldSizeX = fieldSize;
+        this.fieldSizeY = fieldSize;
+        this.winLength = winLength;
+        field = new int[fieldSizeY][fieldSizeX];
+        initialized = true;
+        isGameOver = false;
+        repaint();
+        System.out.printf("New game with: %dx%d sized field, mode: %d and win length %d", fieldSize, fieldSize, gameMode, winLength);
+    }
+
+    private void showMessageGameOver(Graphics g) {
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(0,250, getWidth(), 100);
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("TimesNewRoman", Font.BOLD, 50));
+        switch (stateGameOver) {
+            case STATE_DRAW:
+                g.drawString("Ничья!", 200, getHeight() / 2 + 25);
+                break;
+            case STATE_WIN_HUMAN:
+                g.drawString("Вы победили!", 120, getHeight()/ 2 + 25 );
+                break;
+            case STATE_WIN_AI:
+                g.drawString("Компьютер победил!", 30, getHeight()/ 2 + 25 );
+                break;
+        }
+    }
+
+    private boolean gameCheck(int dot, int stateGameOver) {
+        if (checkWin(dot, winLength)) {
+            this.stateGameOver = stateGameOver;
+            isGameOver = true;
+            repaint();
+//            if (dot == DOT_HUMAN) {
+//                scoreHuman++;
+//            } else {
+//                scoreAI++;
+//            }
+//            System.out.println(s);
+            return true;
+        }
+        if (checkDraw()) {
+            this.stateGameOver = STATE_DRAW;
+            isGameOver = true;
+            repaint();
+            return true;
+        }
+        return false;
+    }
+
+    private void aiTurn0() {
+        if (scanField(DOT_AI, winLength)) return;
+        if (scanField(DOT_HUMAN, winLength)) return;
+        if (scanField(DOT_AI, winLength - 1)) return;
+        if (scanField(DOT_HUMAN, winLength - 1)) return;
+        if (scanField(DOT_AI, winLength - 2)) return;
+        if (scanField(DOT_HUMAN, winLength - 2)) return;
+
+        int x, y;
+        do {
+            x = RANDOM.nextInt(fieldSizeX);
+            y = RANDOM.nextInt(fieldSizeY);
+        } while (!isCellEmpty(x, y));
+
+        field[y][x] = DOT_AI;
+    }
+    private void aiTurn() {
+        int x = 0;
+        int y = 0;
+        for (int i = 1; i <= field.length; i++) {
+            int a = 0;
+            int b = 0;
+            int c = 0;
+            int d = 0;
+            for (int j = 1; j < field.length; j++) {
+                if (field[field.length - (i - 1) - 1][j-1] == field[field.length - (i - 1) - 1][j] && field[field.length - (i - 1) - 1][j-1] != 1) a++;
+                if (field[j-1][j-1] == field[j][j] && field[j-1][j-1] != 1) b++;
+                if (field[j-1][field.length-j] == field[j][field.length-j-1] && field[j-1][field.length-j] != 1) c++;
+                if (field[j-1][field.length - (i - 1) - 1] == field[j][field.length - (i - 1) - 1] && field[j-1][field.length - (i - 1) - 1] != 1) d++;
+                if (a == field.length - 2) {y = field.length - (i - 1) - 1; x = RANDOM.nextInt(fieldSizeX); break;}
+                if (b == field.length - 2) {y = RANDOM.nextInt(fieldSizeY); x = y; break;}
+                if (c == field.length - 2) {y = RANDOM.nextInt(fieldSizeY); x = RANDOM.nextInt(fieldSizeX); break;}
+                if (d == field.length - 2) {x = field.length - (i - 1) - 1; y = RANDOM.nextInt(fieldSizeY); break;}
+            }
+        }
+        if (isCellEmpty(x, y))
+            field[y][x] = DOT_AI;
+
+        else easyCompTurn();
+        //return DOT_AI;
+    }
+    private void easyCompTurn() {
+        int x, y;
+        do {
+            x = RANDOM.nextInt(fieldSizeX);
+            y = RANDOM.nextInt(fieldSizeY);
+        } while (!isCellEmpty(x, y));
+
+        field[y][x] = DOT_AI;
+    }
+    private boolean scanField(int dot, int len) {
+        for (int y = 0; y < fieldSizeY; y++) {
+            for (int x = 0; x < fieldSizeX; x++) {
+                if (isCellEmpty(x, y)) { //Проверим, что смотрим на пустую ячейку
+                    field[y][x] = dot;
+                    if (checkWin(dot, len)) {
+                        if (dot == DOT_AI) return true;
+                        if (dot == DOT_HUMAN) {
+                            field[y][x] = DOT_AI;
+                            return true;
+                        }
+                    }
+                    field[y][x] = DOT_EMPTY;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean checkWin0(int c, int len) {
+        for (int y = 0; y < fieldSizeY; y++) {
+            for (int x = 0; x < fieldSizeX; x++) {
+                if (checkLine(x, y, 1, 0, len, c)) return true; //Проверка горизонталь +х
+                if (checkLine(x, y, 1, 1, len, c)) return true; //проверка диагонали +х +у
+                if (checkLine(x, y, 0, 1, len, c)) return true; //проверка вертикали +у
+                if (checkLine(x, y, 1, -1, len, c)) return true; //проверка диагонали +х -у
+            }
+        }
+        return false;
+    }
+    private boolean checkWin(int c, int len) {
+
+        for (int i = 1; i <= field.length; i++) {
+            int a = 0;
+            int b = 0;
+            int e = 0;
+            int d = 0;
+            for (int j = 1; j < field.length; j++) {
+                if (field[field.length - (i - 1) - 1][j-1] == field[field.length - (i - 1) - 1][j] && field[field.length - (i - 1) - 1][j-1] != 0) a++;
+                if (field[j-1][j-1] == field[j][j] && field[j-1][j-1] != 0) b++;
+                if (field[j-1][field.length-j] == field[j][field.length-j-1] && field[j-1][field.length-j] != 0) e++;
+                if (field[j-1][field.length - (i - 1) - 1] == field[j][field.length - (i - 1) - 1] && field[j-1][field.length - (i - 1) - 1] != 0) d++;
+                if (a == winLength-1) return true;
+                if (b == winLength-1) return true;
+                if (e == winLength-1) return true;
+                if (d == winLength-1) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean checkLine(int x, int y, int incrementX, int incrementY, int len, int dot) {
+        int endXLine = x + (len - 1) * incrementX; //Конец линии по x
+        int endYLine = y + (len - 1) * incrementY; //Конец линии по y
+        if (!isCellValid(endXLine, endYLine)) return false;
+        for (int i = 0; i < len; i++) {
+            if (field[y + i * incrementY][x + i * incrementX] != dot) return false;
+        }
+        return true;
+    }
+
+    private boolean checkDraw() {
+        for (int y = 0; y < fieldSizeY; y++) {
+            for (int x = 0; x < fieldSizeX; x++) {
+                if (isCellEmpty(x, y)) return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isCellValid(int x, int y) {
+        return x >= 0 && y >= 0 && x < fieldSizeX && y < fieldSizeY;
+    }
+
+    private boolean isCellEmpty(int x, int y) {
+        return field[y][x] == DOT_EMPTY;
+    }
+}
+class GameWindow extends JFrame {
+
+    private static final int WINDOW_WIDTH = 600;
+    private static final int WINDOW_HEIGHT = 640;
+    private static final int WINDOW_POS_X = 400;
+    private static final int WINDOW_POS_Y = 70;
+
+    private GameMap map;
+
+    GameWindow() {
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        setLocation(WINDOW_POS_X, WINDOW_POS_Y);
+//        setLocationRelativeTo(null);
+        setTitle("Tic Tac Toe");
+        setResizable(false);
+
+        JButton btnStart = new JButton("<html><body><b>СТАРТ!</b></body></html>");
+        JButton btnStop = new JButton("<html><body><b>ВЫХОД</b></body></html>");
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(1, 2));
+        buttonPanel.add(btnStart);
+        buttonPanel.add(btnStop);
+
+        map = new GameMap();
+        SettingsWindow settings = new SettingsWindow(this);
+
+
+        btnStart.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                settings.setVisible(true);
+            }
+        });
+        btnStop.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        });
+        add(map, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+        setVisible(true);
+    }
+
+    public void startGame(int gameMode, int fieldSize, int winLength) {
+        map.startNewGame(gameMode, fieldSize, winLength);
+    }
+}
+class SettingsWindow extends JFrame {
+    private static final int WINDOW_WIDTH = 350;
+    private static final int WINDOW_HEIGHT = 300;
+    private static final int MIN_WIN_LENGTH = 3;
+    private static final int MIN_FIELD_SIZE = 3;
+    private static final int MAX_FIELD_SIZE = 10;
+    private static final String FIELD_SIZE_PREF = "Размер игрового поля: ";
+    private static final String WIN_LENGTH_PREF = "Количество победных фишек: ";
+
+    private GameWindow gameWindow;
+    private JSlider sliderWinLength;
+    private JSlider sliderFieldSize;
+    private JRadioButton humanVsAI;
+    private JRadioButton humanVsHuman;
+
+    SettingsWindow(GameWindow gameWindow) {
+        this.gameWindow = gameWindow;
+        setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        setLocationRelativeTo(gameWindow);
+        setResizable(false);
+        setTitle("Создать новую игру");
+        setLayout(new GridLayout(10, 1));
+
+        addGameMode();
+        addFieldSize();
+        JButton buttonStartGame = new JButton("Начать новую игру");
+        buttonStartGame.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                saveSettings();
+            }
+        });
+        add(buttonStartGame);
+    }
+
+    private void saveSettings() {
+        int gameMode;
+        if (humanVsAI.isSelected()) {
+            gameMode = GameMap.MODE_VS_AI;
+        } else if (humanVsHuman.isSelected()) {
+            gameMode = GameMap.MODE_VS_HUMAN;
+        } else {
+            throw new RuntimeException("ОШИБКА ИГРОВОГО РЕЖИМА!");
+        }
+        int fieldSize = sliderFieldSize.getValue();
+        int winLength = sliderWinLength.getValue();
+
+        gameWindow.startGame(gameMode, fieldSize, winLength);
+
+        setVisible(false);
+    }
+
+    private void addFieldSize() {
+        JLabel labelFieldSize = new JLabel(FIELD_SIZE_PREF + MIN_FIELD_SIZE);
+        JLabel labelWinLength = new JLabel(WIN_LENGTH_PREF + MIN_WIN_LENGTH);
+
+        sliderFieldSize = new JSlider(MIN_FIELD_SIZE, MAX_FIELD_SIZE, MIN_FIELD_SIZE);
+        sliderWinLength = new JSlider(MIN_WIN_LENGTH, MAX_FIELD_SIZE, MIN_FIELD_SIZE);
+
+        sliderFieldSize.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                int currentValue = sliderFieldSize.getValue();
+                labelFieldSize.setText(FIELD_SIZE_PREF + currentValue);
+                sliderWinLength.setMaximum(currentValue);
+            }
+        });
+
+        sliderWinLength.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                labelWinLength.setText(WIN_LENGTH_PREF + sliderWinLength.getValue());
+            }
+        });
+
+        add(new JLabel("Выберите размер поля:"));
+        add(labelFieldSize);
+        add(sliderFieldSize);
+        add(new JLabel("Количество победных фишек:"));
+        add(labelWinLength);
+        add(sliderWinLength);
+    }
+
+    private void addGameMode() {
+        add(new JLabel("Выберите режим игры:"));
+        humanVsAI = new JRadioButton("Игрок против компьютера", true);
+        humanVsHuman = new JRadioButton("Два игрока (ходы выполняются по-очереди)");
+        ButtonGroup gameMode = new ButtonGroup();
+        gameMode.add(humanVsAI);
+        gameMode.add(humanVsHuman);
+        add(humanVsAI);
+        add(humanVsHuman);
+    }
+}
