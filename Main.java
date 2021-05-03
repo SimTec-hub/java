@@ -1,63 +1,70 @@
 package geekbrain;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+
 public class Main {
 
     public static void main(String[] args) {
-        try {
-        buildarray();
-        } catch(MyArraySizeException e) {
-        }
-        catch(MyArrayDataException e){
-        e.printStackTrace();
-        }
-    }
-
-    private static void buildarray() {
-        int size1;
-        int size2;
-        //size1 = (int) Math.random() * 10;
-        //size2 = (int) Math.random() * 10;
-        size1 = 4;
-        size2 = 4;
-        if (size1 != 4 || size2 != 4)
-            throw new MyArraySizeException();
-        String[][] array = new String[size1][size2];
-        for (int i = 0; i < array.length; i++) {
-            for (int y = 0; y < array[0].length; y++)
-                array[i][y] = String.valueOf((int) (Math.random() * 10));
-        }
-        //array[2][3] = "zzz";
-        int sum = 0;
-        for (int i = 0; i < array.length; i++) {
-            for (int y = 0; y < array[0].length; y++){
-                try {
-                    sum += Integer.parseInt(array[i][y]);
-                } catch (NumberFormatException e) {
-                    System.out.printf("Элемент не является числом [%d][%d]\n", i, y);
-                    throw new MyArrayDataException();
-                }
-
-            }
-
-        }
-        printarray(array);
-       System.out.println("Сумма элементов массива равна " + sum);
-    }
-
-    private static void printarray(String[][] array) {
-        for (int k = 0; k < array.length; k++) {
-            for (int j = 0; j < array[0].length; j++) {
-                System.out.print(" " + array[k][j] + " ");
-            }
-            System.out.println();
+	String[] words = {
+        "Тверь",
+        "Ржев",
+        "Торопец",
+        "Торжок",
+        "Кимры",
+        "Конаково",
+         "Удомля",
+         "Бежецк",
+         "Ржев",
+         "Осташков",
+         "Ржев",
+         "Калязин",
+         "Торопец",
+         "Удомля",
+         "Озёрный",
+         "Кувшиново",
+         "Кимры",
+         "Старица",
+         "Максатиха",
+         "Калязин"};
+        ArrayList<String> unique_words = new ArrayList<>();
+        HashMap<String, Integer> counter = new HashMap<>();
+        int x = 0;
+	for (int i = 0; i < words.length; i++) {
+	    if (!unique_words.contains(words[i])){
+	        unique_words.add(words[i]);
+	        counter.put(words[i], 1);
+	    }
+	    else
+        {
+            x = counter.get(words[i]);
+            x = x +1;
+            counter.replace(words[i], x);
         }
     }
+    Iterator iterator = unique_words.iterator();
+	while (iterator.hasNext()) {
+	    System.out.println(iterator.next());
+        }
+	//System.out.println(counter);
+        for (HashMap.Entry<String, Integer> pair : counter.entrySet())
+        {
+            String key = pair.getKey();
+            int value = pair.getValue();
+            System.out.println("Количество слов " + key + " = " + value);
+        }
 
-    static class MyArraySizeException extends ArrayIndexOutOfBoundsException{
-        public MyArraySizeException() {System.out.println("Размер массива должен быть строго 4х4!");
-        }
+        Phone_direct book = new Phone_direct();
+        book.add("Петров", "8-555-777-23");
+        book.add("Маслов", "8-555-798-56");
+        book.add("Петров", "8-555-777-23");
+        book.add("Жуков", "8-555-688-20");
+        book.add("Петров", "8-555-000-23");
+
+        System.out.println("Номер телефона Петрова: " + book.get("Петров"));
+        System.out.println("Номер телефона Жукова: " + book.get("Жуков"));
     }
-    static class MyArrayDataException extends NumberFormatException {
-        }
+
+
 }
-
